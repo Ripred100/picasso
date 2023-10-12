@@ -18,7 +18,7 @@ def gram_matrix(A):
 
     return GA
 
-@tf.function()
+#@tf.function()
 def compute_content_cost(content_output, generated_output):
     """
     Computes the content cost
@@ -50,7 +50,7 @@ def compute_content_cost(content_output, generated_output):
     
     return J_content
 
-@tf.function()
+#@tf.function()
 def compute_layer_style_cost(a_S, a_G):
     """
     Arguments:
@@ -63,6 +63,7 @@ def compute_layer_style_cost(a_S, a_G):
     ### START CODE HERE
     
     # Retrieve dimensions from a_G (≈1 line)
+    assert(a_G.get_shape() == a_S.get_shape())
     _, n_H, n_W, n_C = a_G.get_shape().as_list()
     
     # Reshape the tensors from (1, n_H, n_W, n_C) to (n_C, n_H * n_W) (≈2 lines)
@@ -79,7 +80,7 @@ def compute_layer_style_cost(a_S, a_G):
     
     return J_style_layer
 
-@tf.function()
+#@tf.function()
 def compute_style_cost(style_image_output, generated_image_output, STYLE_LAYERS):
     """
     Computes the overall style cost from several chosen layers
@@ -105,8 +106,10 @@ def compute_style_cost(style_image_output, generated_image_output, STYLE_LAYERS)
     # Set a_G to be the output of the choosen hidden layers.
     # The last element of the list contains the content layer image which must not be used.
     a_G = generated_image_output[:-1]
+    #print(a_G.shape)
     for i, weight in zip(range(len(a_S)), STYLE_LAYERS):  
         # Compute style_cost for the current layer
+        
         J_style_layer = compute_layer_style_cost(a_S[i], a_G[i])
 
         # Add weight * J_style_layer of this layer to overall style cost
@@ -114,8 +117,21 @@ def compute_style_cost(style_image_output, generated_image_output, STYLE_LAYERS)
 
     return J_style
 
-@tf.function()
-def total_cost(J_content, J_style, alpha = 10, beta = 40):
+#This creates the loss-function for denoising the mixed-image. 
+#The algorithm is called Total Variation Denoising and essentially just shifts the image one pixel in the x- 
+#and y-axis,calculates the difference from the original image, takes the absolute value to ensure the difference is a 
+#positive number, and sums over all the pixels in the image. This creates a loss-function that can be 
+#minimized so as to suppress some of the noise in the image.
+#@tf.function()
+def compute_noise_cost(a_I):
+    #print(vgg.get_layer(vgg.layers[0].name).output)
+    loss = tf.reduce_sum(tf.abs(a_I[:,1:,:,:] - a_I[:,:-1,:,:])) + \
+           tf.reduce_sum(tf.abs(a_I[:,:,1:,:] - a_I[:,:,:-1,:]))
+
+    return loss
+
+#@tf.function()
+def total_cost(J_content, J_style, J_noise, alpha = 10, beta = 40, gamma = 0.001):
     """
     Computes the total cost function
     
@@ -131,7 +147,7 @@ def total_cost(J_content, J_style, alpha = 10, beta = 40):
     ### START CODE HERE
     
     #(≈1 line)
-    J = alpha*J_content + beta*J_style
+    J = alpha*J_content + beta*J_style + gamma*J_noise
     
     ### START CODE HERE
 

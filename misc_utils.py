@@ -39,3 +39,23 @@ def tensor_to_image(tensor):
         assert tensor.shape[0] == 1
         tensor = tensor[0]
     return Image.fromarray(tensor)
+
+def load_images(content_im_path, style_im_path, start_im_path=None, img_size=300):
+    if start_im_path is None:
+        start_im_path = content_im_path
+    content_image = np.array(Image.open(content_im_path).resize((img_size, img_size)))
+    content_image = tf.constant(np.reshape(content_image, ((1,) + content_image.shape)))
+    
+    style_image =  np.array(Image.open(style_im_path).resize((img_size, img_size)))
+    style_image = tf.constant(np.reshape(style_image, ((1,) + style_image.shape)))
+
+    content_image2 = np.array(Image.open(start_im_path).resize((img_size, img_size)))
+    content_image2 = tf.constant(np.reshape(content_image2, ((1,) + content_image2.shape)))
+    generated_image = tf.Variable(tf.image.convert_image_dtype(content_image2, tf.float32))
+    #generated_image = tf.Variable(tf.zeros(tf.shape(generated_image))); generated_image = tf.add(generated_image, 0.5)
+    noise = tf.random.uniform(tf.shape(generated_image), -0.1, 0.1)
+    #generated_image = tf.add(generated_image, noise)
+    generated_image = tf.clip_by_value(generated_image, clip_value_min=0.0, clip_value_max=1.0)
+    generated_image = tf.Variable(generated_image)
+
+    return content_image, style_image, generated_image

@@ -18,7 +18,7 @@ def gram_matrix(A):
 
     return GA
 
-#@tf.function()
+@tf.function()
 def compute_content_cost(content_output, generated_output):
     """
     Computes the content cost
@@ -30,8 +30,9 @@ def compute_content_cost(content_output, generated_output):
     Returns: 
     J_content -- scalar that you compute using equation 1 above.
     """
-    a_C = content_output[-1]
-    a_G = generated_output[-1]
+    
+    a_C = content_output
+    a_G = generated_output
     
     ### START CODE HERE
     
@@ -50,7 +51,7 @@ def compute_content_cost(content_output, generated_output):
     
     return J_content
 
-#@tf.function()
+@tf.function()
 def compute_layer_style_cost(a_S, a_G):
     """
     Arguments:
@@ -80,41 +81,53 @@ def compute_layer_style_cost(a_S, a_G):
     
     return J_style_layer
 
-#@tf.function()
-def compute_style_cost(style_image_output, generated_image_output, STYLE_LAYERS):
+@tf.function()
+def compute_style_cost(style_image_output, generated_image_output, STYLE_LAYERS, layer_wise_output=False):
     """
     Computes the overall style cost from several chosen layers
     
     Arguments:
     style_image_output -- our tensorflow model
     generated_image_output --
-    STYLE_LAYERS -- A python list containing:
+    STYLE_LAYERS -- A python list containing of length num_style_layers:
                         - the names of the layers we would like to extract style from
                         - a coefficient for each of them
+    layer_wise_output -- Boolean. If True, returns a list of length num_style_layers representing the layer-wise cost
+
     
     Returns: 
-    J_style -- tensor representing a scalar value, style cost defined above by equation (2)
+    J_style -- tensor representing a scalar value, style cost defined above by equation (2) OR
+                - if layer_wise_output is True, a list of length num_style_layers representing the layer-wise cost
+
     """
     
     # initialize the overall style cost
-    J_style = 0
+    if layer_wise_output == False:
+        J_style = 0
+    else:
+        J_style = []
 
     # Set a_S to be the hidden layer activation from the layer we have selected.
     # The last element of the array contains the content layer image, which must not be used.
-    a_S = style_image_output[:-1]
+    a_S = style_image_output
 
     # Set a_G to be the output of the choosen hidden layers.
     # The last element of the list contains the content layer image which must not be used.
-    a_G = generated_image_output[:-1]
-    #print(a_G.shape)
+    a_G = generated_image_output
+    
     for i, weight in zip(range(len(a_S)), STYLE_LAYERS):  
         # Compute style_cost for the current layer
         
         J_style_layer = compute_layer_style_cost(a_S[i], a_G[i])
 
-        # Add weight * J_style_layer of this layer to overall style cost
-        J_style += weight[1] * J_style_layer
-
+        
+        if layer_wise_output == False:
+            # Add weight * J_style_layer of this layer to overall style cost
+            J_style += weight[1] * J_style_layer
+        else:
+            # Store layer i's contribution to style cost
+            J_style.append( weight[1] * J_style_layer)
+    
     return J_style
 
 #This creates the loss-function for denoising the mixed-image. 
@@ -122,7 +135,7 @@ def compute_style_cost(style_image_output, generated_image_output, STYLE_LAYERS)
 #and y-axis,calculates the difference from the original image, takes the absolute value to ensure the difference is a 
 #positive number, and sums over all the pixels in the image. This creates a loss-function that can be 
 #minimized so as to suppress some of the noise in the image.
-#@tf.function()
+@tf.function()
 def compute_noise_cost(a_I):
     #print(vgg.get_layer(vgg.layers[0].name).output)
     loss = tf.reduce_sum(tf.abs(a_I[:,1:,:,:] - a_I[:,:-1,:,:])) + \
@@ -130,7 +143,7 @@ def compute_noise_cost(a_I):
 
     return loss
 
-#@tf.function()
+@tf.function()
 def total_cost(J_content, J_style, J_noise, alpha = 10, beta = 40, gamma = 0.001):
     """
     Computes the total cost function

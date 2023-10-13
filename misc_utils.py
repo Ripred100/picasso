@@ -40,7 +40,20 @@ def tensor_to_image(tensor):
         tensor = tensor[0]
     return Image.fromarray(tensor)
 
-def load_images(content_im_path, style_im_path, start_im_path=None, img_size=300):
+def replace_maxpool_with_avgpool(model):
+    new_model = tf.keras.Sequential()
+
+    for layer in model.layers:
+        if 'pool' in layer.name:
+            new_model.add(tf.keras.layers.AveragePooling2D(pool_size=(2, 2), strides=(2, 2), padding='valid'))
+        else:
+            new_model.add(layer)
+
+    return new_model
+
+
+
+def load_images(content_im_path, style_im_path, start_im_path=None, img_size=300, gen_noise=False, white_noise=False):
     if start_im_path is None:
         start_im_path = content_im_path
     content_image = np.array(Image.open(content_im_path).resize((img_size, img_size)))
@@ -53,8 +66,12 @@ def load_images(content_im_path, style_im_path, start_im_path=None, img_size=300
     content_image2 = tf.constant(np.reshape(content_image2, ((1,) + content_image2.shape)))
     generated_image = tf.Variable(tf.image.convert_image_dtype(content_image2, tf.float32))
     #generated_image = tf.Variable(tf.zeros(tf.shape(generated_image))); generated_image = tf.add(generated_image, 0.5)
-    noise = tf.random.uniform(tf.shape(generated_image), -0.1, 0.1)
-    #generated_image = tf.add(generated_image, noise)
+    
+    if(gen_noise):
+        noise = tf.random.uniform(tf.shape(generated_image), -0.25, 0.25)
+        generated_image = tf.add(generated_image, noise)
+    if(white_noise):
+        generated_image = tf.random.uniform(tf.shape(generated_image), 0, 1)
     generated_image = tf.clip_by_value(generated_image, clip_value_min=0.0, clip_value_max=1.0)
     generated_image = tf.Variable(generated_image)
 

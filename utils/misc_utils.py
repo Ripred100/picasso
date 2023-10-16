@@ -51,8 +51,6 @@ def replace_maxpool_with_avgpool(model):
 
     return new_model
 
-
-
 def load_images(content_im_path, style_im_path, start_im_path=None, img_size=300, gen_noise=False, white_noise=False):
     if start_im_path is None:
         start_im_path = content_im_path

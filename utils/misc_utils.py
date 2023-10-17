@@ -3,13 +3,6 @@ import tensorflow as tf
 import numpy as np
 from PIL import Image
 
-def get_layer_outputs(vgg, layer_names):
-    """ Creates a vgg model that returns a list of intermediate output values."""
-    outputs = [vgg.get_layer(layer[0]).output for layer in layer_names]
-
-    model = tf.keras.Model([vgg.input], outputs)
-    return model
-
 def clip_0_1(image):
     """
     Truncate all the pixels in the tensor to be between 0 and 1
@@ -40,16 +33,6 @@ def tensor_to_image(tensor):
         tensor = tensor[0]
     return Image.fromarray(tensor)
 
-def replace_maxpool_with_avgpool(model):
-    new_model = tf.keras.Sequential()
-
-    for layer in model.layers:
-        if 'pool' in layer.name:
-            new_model.add(tf.keras.layers.AveragePooling2D(pool_size=(2, 2), strides=(2, 2), padding='valid'))
-        else:
-            new_model.add(layer)
-
-    return new_model
 
 def load_images(content_im_path, style_im_path, start_im_path=None, img_size=300, gen_noise=False, white_noise=False):
     if start_im_path is None:

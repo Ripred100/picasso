@@ -2,8 +2,11 @@ import numpy as np
 import os
 from PIL import Image
 import tensorflow as tf
+import json
 from picasso import STYLE_LAYERS, CONTENT_LAYERS
 from picasso.utils.misc_utils import *
+from picasso.vgg.vgg_model import *
+
 
 def load_and_preprocess_image(file_path, img_size = 224):
     image = tf.io.read_file(file_path)
@@ -13,7 +16,10 @@ def load_and_preprocess_image(file_path, img_size = 224):
     image = tf.cast(image, tf.float32) / 255.0  # Normalize pixel values to [0, 1]
     return image
 
-def generate_image_batches(img_folder='/home/asg/imagenet/val/', batch_size= 32, img_size = 224):
+def generate_image_batches(img_folder='/home/asg/imagenet/val/', batch_size= 32, img_size = 256, random_seed = None):
+    if random_seed is not None:
+        tf.random.set_seed(random_seed)
+
     #Get a list of image file paths in the folder
     image_files = [os.path.join(img_folder, filename) for filename in os.listdir(img_folder)]
     #Create Dataset object with image files
@@ -24,20 +30,74 @@ def generate_image_batches(img_folder='/home/asg/imagenet/val/', batch_size= 32,
     image_dataset = image_dataset.batch(batch_size).prefetch(tf.data.AUTOTUNE)
     return image_dataset
 
-img_size = 224
-image_dataset = generate_image_batches(img_size = 224)
 
-vgg = tf.keras.applications.VGG19(include_top=False,
-                                  input_shape=(img_size, img_size, 3),
-                                  weights='imagenet')
+def get_layerwise_mean_activations(model, img_folder= '/home/asg/imagenet/val/', img_size= 256, batch_size = 32):
+    '''
+    Description:
+    Calculates the layerwise mean activations of a given 'model', over all images in some image folder 'img_folder' 
+    
+    inputs: 
+        - model: some tensorflow model
+        - img_folder: path to folder containing images to pass into model
+        - img_size: size to resize images to
+        - batch_size: size of the minibatches to be fed into model
 
-vgg = replace_maxpool_with_avgpool(vgg)
-vgg.trainable = False
+    returns:
+        - lobal_layer_mean: dictionary with signature ('{layername}', 1)
+    
+    '''
+    image_dataset = generate_image_batches(img_folder=img_folder, batch_size=batch_size, img_size = img_size)
+    global_layer_mean = {}
 
-vgg_style_outputs = get_layer_outputs(vgg, STYLE_LAYERS)
-vgg_model_content_outputs = get_layer_outputs(vgg, CONTENT_LAYERS)
+    cumulative_mean = np.zeros(len(model.output_names), dtype=np.float32)
+    
+    m = 0 # Images already processed
+
+    # Loop over each batch in the dataset
+    for i, data in enumerate(image_dataset):
+        
+        if len(data) != batch_size: # For edge case where we run into end of the dataset. Might remove
+            batch_size = len(data)
+
+        outputs = model(data)
+        
+        # Calculate the mean layer activations for the output. The output may be one, or multiple layers.
+        if tf.is_tensor(outputs):  # If there is only one output layer
+            batch_mean = tf.reduce_mean(outputs, axis=(0, 1, 2, 3))
+            cumulative_mean = cumulative_mean*(m/(m + batch_size)) + batch_mean*(batch_size/(m + batch_size))
+        elif type(outputs) == list:  # If there are multiple output layers
+            layerwise_batch_mean = [tf.reduce_mean(layer, axis=(0, 1, 2, 3)) for layer in outputs]
+            for i, layer_mean in enumerate(layerwise_batch_mean):
+                cumulative_mean[i] = cumulative_mean[i]*(m/(m + batch_size)) + layer_mean*(batch_size/(m + batch_size))
+        else:
+            raise TypeError("Unexpected type for 'outputs': {}".format(type(outputs)))
+
+        m = m + batch_size # Update number of images already processed
+        print(f'Processed {m} images')
+    
+
+    for i, name in enumerate(model.output_names):
+        global_layer_mean[name] = cumulative_mean[i]
+    print(type(global_layer_mean))
+    return global_layer_mean
 
 
-for data in image_dataset.take(1):
-    test = vgg_model_content_outputs(data)
-    print(test)
+def gen_mean_activations():
+    img_size = 256
+    image_dataset = generate_image_batches(img_size = img_size)
+    vgg = get_model(img_size=img_size)
+
+    layer_mean_activations = get_layerwise_mean_activations(get_porous_model(), img_folder= '/home/asg/imagenet/val/', img_size= 256, batch_size = 64)
+
+    json_file_path = "vgg/mean_activation.json"
+
+    # Convert float32 values to float
+    for key in layer_mean_activations:
+        layer_mean_activations[key] = float(layer_mean_activations[key])
+
+    # Save the dictionary to the JSON file
+    with open(json_file_path, "w") as json_file:
+        json.dump(layer_mean_activations, json_file)
+
+gen_mean_activations()
+

@@ -52,7 +52,7 @@ def get_layerwise_mean_activations(model, img_folder= '/home/asg/imagenet/val/',
     m = 0 # Images already processed
 
     # Loop over each batch in the dataset
-    for i, data in enumerate(image_dataset):
+    for i, data in enumerate(image_dataset.take(500)):
         
         if len(data) != batch_size: # For edge case where we run into end of the dataset. Might remove
             batch_size = len(data)
@@ -86,7 +86,7 @@ def gen_mean_activations(model, img_folder= '/home/asg/imagenet/val/', img_size 
 
     layer_mean_activations = get_layerwise_mean_activations(model=model, img_folder= img_folder, img_size= img_size, batch_size = 16)
 
-    json_file_path = "vgg/mean_activation_" + img_size + ".json"
+    json_file_path = "vgg/mean_activation_" + str(img_size) + ".json"
 
     # Convert float32 values to float
     for key in layer_mean_activations:

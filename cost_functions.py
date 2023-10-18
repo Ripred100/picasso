@@ -144,7 +144,7 @@ def compute_noise_cost(a_I):
     return loss
 
 @tf.function()
-def total_cost(J_content, J_style, J_noise, alpha = 10, beta = 40, gamma = 0.001):
+def total_cost(J_content, J_style, alpha = 10, beta = 40):
     """
     Computes the total cost function
     
@@ -160,7 +160,7 @@ def total_cost(J_content, J_style, J_noise, alpha = 10, beta = 40, gamma = 0.001
     ### START CODE HERE
     
     #(≈1 line)
-    J = alpha*J_content + beta*J_style + gamma*J_noise
+    J = alpha*J_content + beta*J_style
     
     ### START CODE HERE
 

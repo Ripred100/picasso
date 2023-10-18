@@ -35,6 +35,22 @@ def tensor_to_image(tensor):
 
 
 def load_images(content_im_path, style_im_path, start_im_path=None, img_size=300, gen_noise=False, white_noise=False):
+    """
+    Loads images for use in style transfer 
+    
+    Arguments:
+    content_im_path -- String of path containing desired content image
+    style_im_path -- String of path containing desired style image
+    start_im_path -- (optional) String of path containing starting image
+    img_size -- int size to preprocess the above images into.
+    gen_noise -- Bool option to generate random noise to add to start image
+    white_noise -- Bool option to start image from white noise. overrides start_im_path and gen_noise
+    
+    Returns:
+    content_image -- preprocessed image tensor
+    style_image -- preprocessed image tensor
+    generated_image -- preprocessed image variable tensor
+    """
     if start_im_path is None:
         start_im_path = content_im_path
     content_image = np.array(Image.open(content_im_path).resize((img_size, img_size)))
@@ -48,10 +64,10 @@ def load_images(content_im_path, style_im_path, start_im_path=None, img_size=300
     generated_image = tf.Variable(tf.image.convert_image_dtype(content_image2, tf.float32))
     #generated_image = tf.Variable(tf.zeros(tf.shape(generated_image))); generated_image = tf.add(generated_image, 0.5)
     
-    if(gen_noise):
+    if(gen_noise): # Generates random noise and adds it to your starting image
         noise = tf.random.uniform(tf.shape(generated_image), -0.25, 0.25)
         generated_image = tf.add(generated_image, noise)
-    if(white_noise):
+    if(white_noise): # Starts the image from random white noise. Overrides gen_nosie option
         generated_image = tf.random.uniform(tf.shape(generated_image), 0, 1)
     generated_image = tf.clip_by_value(generated_image, clip_value_min=0.0, clip_value_max=1.0)
     generated_image = tf.Variable(generated_image)

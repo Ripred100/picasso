@@ -1,5 +1,6 @@
 from vgg.weight_normalization import *
 from vgg.vgg_model import *
 
-
-gen_mean_activations(get_model(img_size=512, weights_normalized=False),img_size=512)
+model = get_model(img_size=256, weights_normalized=False)
+model_porous = get_porous_model(model)
+gen_mean_activations(model_porous,img_size=256)

@@ -52,7 +52,7 @@ def get_layerwise_mean_activations(model, img_folder= '/home/asg/imagenet/val/',
     m = 0 # Images already processed
 
     # Loop over each batch in the dataset
-    for i, data in enumerate(image_dataset.take(500)):
+    for i, data in enumerate(image_dataset.take(10)):
         
         if len(data) != batch_size: # For edge case where we run into end of the dataset. Might remove
             batch_size = len(data)
@@ -76,7 +76,7 @@ def get_layerwise_mean_activations(model, img_folder= '/home/asg/imagenet/val/',
 
     for i, name in enumerate(model.output_names):
         global_layer_mean[name] = cumulative_mean[i]
-    #print(type(global_layer_mean))
+    print(type(global_layer_mean))
     return global_layer_mean
 
 
@@ -84,9 +84,9 @@ def gen_mean_activations(model, img_folder= '/home/asg/imagenet/val/', img_size 
     
     #image_dataset = generate_image_batches(img_size = img_size)
 
-    layer_mean_activations = get_layerwise_mean_activations(model=model, img_folder= img_folder, img_size= img_size, batch_size = 16)
+    layer_mean_activations = get_layerwise_mean_activations(model=model, img_folder= img_folder, img_size= img_size, batch_size = 8)
 
-    json_file_path = "vgg/mean_activation_" + str(img_size) + ".json"
+    json_file_path = "vgg/mean_activation_new.json"
 
     # Convert float32 values to float
     for key in layer_mean_activations:
@@ -96,7 +96,7 @@ def gen_mean_activations(model, img_folder= '/home/asg/imagenet/val/', img_size 
     with open(json_file_path, "w") as json_file:
         json.dump(layer_mean_activations, json_file)
 
-def scale_weights(model, json_file_path = "vgg/mean_activation.json"):
+def scale_weights(model, json_file_path):
     ''''
     Scales weights to have average activations = 1
 

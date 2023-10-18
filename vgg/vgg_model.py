@@ -3,7 +3,7 @@ from vgg.weight_normalization import scale_weights
 #from utils.misc_utils import *
 from picasso import STYLE_LAYERS, CONTENT_LAYERS
 
-def get_model(img_size= 256, global_pooling = "average", weights_normalized = True):
+def get_model(img_size= 512, global_pooling = "average", weights_normalized = False):
     vgg = tf.keras.applications.VGG19(include_top=False,
                                   input_shape=(img_size, img_size, 3),
                                   weights='imagenet')
@@ -13,7 +13,7 @@ def get_model(img_size= 256, global_pooling = "average", weights_normalized = Tr
         
     
     if weights_normalized:
-        vgg = scale_weights(vgg)
+        vgg = scale_weights(vgg, json_file_path=("vgg/mean_activation.json"))
     #else:
         
         

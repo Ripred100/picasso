@@ -1,5 +1,6 @@
 import tensorflow as tf
-from utils.misc_utils import *
+from vgg.weight_normalization import scale_weights
+#from utils.misc_utils import *
 from picasso import STYLE_LAYERS, CONTENT_LAYERS
 
 def get_model(img_size= 256, global_pooling = "average", weights_normalized = True):
@@ -8,10 +9,16 @@ def get_model(img_size= 256, global_pooling = "average", weights_normalized = Tr
                                   weights='imagenet')
     if global_pooling == "average":
         vgg = replace_maxpool_with_avgpool(vgg)
-    elif global_pooling == "max":
-        None
+    #elif global_pooling == "max":
+        
     
+    if weights_normalized:
+        vgg = scale_weights(vgg)
+    #else:
+        
+        
     vgg.trainable = False
+
     return vgg
 
 def replace_maxpool_with_avgpool(model):

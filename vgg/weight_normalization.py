@@ -4,8 +4,6 @@ from PIL import Image
 import tensorflow as tf
 import json
 from picasso import STYLE_LAYERS, CONTENT_LAYERS
-from picasso.utils.misc_utils import *
-from picasso.vgg.vgg_model import *
 
 
 def load_and_preprocess_image(file_path, img_size = 224):
@@ -43,7 +41,7 @@ def get_layerwise_mean_activations(model, img_folder= '/home/asg/imagenet/val/',
         - batch_size: size of the minibatches to be fed into model
 
     returns:
-        - lobal_layer_mean: dictionary with signature ('{layername}', 1)
+        - global_layer_mean: dictionary with signature ('{layername}', 1)
     
     '''
     image_dataset = generate_image_batches(img_folder=img_folder, batch_size=batch_size, img_size = img_size)
@@ -78,18 +76,17 @@ def get_layerwise_mean_activations(model, img_folder= '/home/asg/imagenet/val/',
 
     for i, name in enumerate(model.output_names):
         global_layer_mean[name] = cumulative_mean[i]
-    print(type(global_layer_mean))
+    #print(type(global_layer_mean))
     return global_layer_mean
 
 
-def gen_mean_activations():
-    img_size = 256
-    image_dataset = generate_image_batches(img_size = img_size)
-    vgg = get_model(img_size=img_size)
+def gen_mean_activations(model, img_folder= '/home/asg/imagenet/val/', img_size = 256):
+    
+    #image_dataset = generate_image_batches(img_size = img_size)
 
-    layer_mean_activations = get_layerwise_mean_activations(get_porous_model(), img_folder= '/home/asg/imagenet/val/', img_size= 256, batch_size = 64)
+    layer_mean_activations = get_layerwise_mean_activations(model=model, img_folder= img_folder, img_size= img_size, batch_size = 16)
 
-    json_file_path = "vgg/mean_activation.json"
+    json_file_path = "vgg/mean_activation_" + img_size + ".json"
 
     # Convert float32 values to float
     for key in layer_mean_activations:
@@ -99,5 +96,31 @@ def gen_mean_activations():
     with open(json_file_path, "w") as json_file:
         json.dump(layer_mean_activations, json_file)
 
-gen_mean_activations()
+def scale_weights(model, json_file_path = "vgg/mean_activation.json"):
+    ''''
+    Scales weights to have average activations = 1
+
+    IMPORTANT::: ASSUMES LAYERS ARE IN ORDER IN JSON. GOING IN ORDER OF COMPUTATION
+    '''
+    if os.path.exists(json_file_path):
+        with open(json_file_path, "r") as json_file:
+            mean_activation_dict = json.load(json_file)
+    else:
+        raise FileNotFoundError("JSON file does not exist. Please run picasso.vgg.weight_normaliation.gen_mean_activations()")
+    
+    prev_layer = None
+    for layer_name, mean_activation in mean_activation_dict.items():
+        layer = model.get_layer(layer_name)
+        if prev_layer == None:
+            layer.set_weights([w / mean_activation for w in layer.get_weights()])
+            prev_layer = layer_name
+        else:
+            layer.set_weights([w*mean_activation_dict[prev_layer] /mean_activation for w in layer.get_weights()])
+            prev_layer = layer_name
+    return model
+
+
+
+
+
 

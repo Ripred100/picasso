@@ -76,7 +76,7 @@ def compute_layer_style_cost(a_S, a_G):
     GG = gram_matrix(a_G)
 
     # Computing the loss (≈1 line)
-    J_style_layer = tf.reduce_sum(tf.square(tf.subtract(GS,GG)))/(4*(n_C**2) * ((n_H*n_W)**2))
+    J_style_layer = tf.reduce_sum(tf.square(tf.subtract(GS,GG))) / (4*(n_C**2) * ((n_H*n_W)**2))
     ### END CODE HERE
     
     return J_style_layer

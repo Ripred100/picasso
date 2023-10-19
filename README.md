@@ -7,6 +7,7 @@ Image outputs are stored in the output folder.
 
 ![alt text](images/field_result.png?raw=true)
 
+![alt text](images/sib_result.png?raw=true)
 ### Notes: ###
 
 The original paper "Image Style Transfer Using Convolutional Neural Networks" Mentions they used a modified VGG19 network "publicly available" in the caffe-framework. Despite my best efforts, I was not able to find such a network.
